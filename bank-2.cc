@@ -54,6 +54,10 @@ double dowork() {
 
     if (temp < 5) {
       balance();
+      // int val = balance();
+      // if (val != 100000) { 
+      //   std::cout << "DALBAEB" << std::endl;
+      // }
     }
     else {
       deposit(generator);

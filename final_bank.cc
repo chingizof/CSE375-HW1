@@ -7,19 +7,16 @@
 #include <thread> // for threads
 #include <vector> // for vectors/arrays
 #include <random>
-#include <time.h> // for time
- 
+
+template<typename KeyType, typename ValueType>
+using GenericMap = std::map<KeyType, ValueType>;
+GenericMap<int, float> bank;
+std::mutex mutex;
+
 const int num_threads = 16;
 const int num_accounts = 10000;
 const float initial_amount = 10.0f;
 const int num_dowork = 10000;
-const int num_segments = 100;
-
-std::map<int, float> bank;
-std::mutex global_mutex;
-std::array<std::mutex, num_accounts> mtx;
-std::array<std::mutex, num_segments> blnc_mtx;
-std::array<int, num_segments> global_balances;
 
 void deposit(std::mt19937 &generator) {
   std::uniform_int_distribution<int> account(0, num_accounts-1);
@@ -28,15 +25,10 @@ void deposit(std::mt19937 &generator) {
   int b1 = account(generator), b2 = account(generator);
   int v =  value(generator); // from 1 to 10
 
-  if (b1 == b2) {
-    return;
-  }
+  // int new_b1 = b1 - v;
+  // int new_b2 = b2 + v;
 
-  int first_acc = std::min(b1, b2);
-  int second_acc = std::max(b1, b2);
-
-  std::lock_guard<std::mutex> lock1(mtx[first_acc]);
-  std::lock_guard<std::mutex> lock2(mtx[second_acc]);
+  std::lock_guard<std::mutex> lock(mutex);
   bank[b1] -= v;
   bank[b2] += v;
 }
@@ -44,11 +36,7 @@ void deposit(std::mt19937 &generator) {
 float balance() {
   float total = 0.0f;
 
-  for (int i=0; i < num_accounts; i++) {
-    std::lock_guard<std::mutex> lock(mtx[i]);
-  }
-
-  // std::lock_guard<std::mutex> lock(global_mutex);
+  std::lock_guard<std::mutex> lock(mutex);
   for (int i=0; i < num_accounts; i++) {
     total += bank[i];
   }
@@ -65,12 +53,11 @@ double dowork() {
     int temp = chance(generator);
 
     if (temp < 5) {
-    //   std::cout << "local balance " << balance() << std::endl;
-    // balance();
-    int val = balance();
-    if (val != 100000) { 
-      std::cout << "DALBAEB" << std::endl;
-    }
+      // balance();
+      int val = balance();
+      if (val != 100000) { 
+        std::cout << "DALBAEB" << std::endl;
+      }
     }
     else {
       deposit(generator);
@@ -79,31 +66,30 @@ double dowork() {
 
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed = end - start;
+  // std::cout << "Elapsed time: " << elapsed.count() << " seconds" << std::endl;
 
   return elapsed.count();
 }
 
 int main() {
   std::vector<int> idx_threads = {1, 2, 4, 8, 16, 28};
-  for (int i = 0; i < num_segments; i++) {
-    global_balances[i] = (int) (num_accounts*initial_amount / num_segments);
-  }
-
   for (int num_threads: idx_threads) {
     std::cout << "======" << std::endl;
     std::cout << num_threads << " THREADS" << std::endl;
-
-    bank.clear(); // clear bank before each iteration
 
     for (int i=0; i < num_accounts; i++) {
       bank.insert({i, initial_amount}); //insert by 10$
     }
 
     float total = balance();
+    // std::cout << "total balance is: " << total << std::endl;
   
     std::vector<std::future<double>> futures;
     for (int i=0; i < num_threads; i++) {
-      futures.emplace_back(std::async(std::launch::async, dowork));
+      // std::future<double> single_future = std::async(std::launch::async, dowork);
+      // futures.push_back(single_future);
+
+      futures.push_back(std::async(std::launch::async, dowork));
     }
 
     double total_time = 0.0;

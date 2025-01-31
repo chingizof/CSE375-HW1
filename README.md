@@ -1,5 +1,12 @@
 
+This is my homework for CSE375 class. 
 
+### Running a program
+```
+cd cse375
+g++ -o final_bank-2 final_bank-2.cc -pthread -O3
+./final_bank-2
+```
 
 # initial version 1
 ```======
@@ -519,35 +526,80 @@ actually I realized that I have a race condition
 
 
 
-## rewrote balance to lock all of the personal locks, sum their values, and unlock them (bank-9.cc)
+##  (RACE CONDITION) rewrote balance to lock all of the personal locks, sum their values, and unlock them (bank-9.cc)
 
-still good speedup (30x, 8x)
+no good speeedup 
 ```
 ======
-
 1 THREADS
-total time calculated is: 0.00206022
+total time calculated is: 0.18801
 total balance at the end is: 100000
 ======
 2 THREADS
-total time calculated is: 0.00416428
+total time calculated is: 0.662282
 total balance at the end is: 100000
 ======
 4 THREADS
-total time calculated is: 0.01011
+total time calculated is: 2.53659
 total balance at the end is: 100000
 ======
 8 THREADS
-total time calculated is: 0.0209129
+total time calculated is: 10.3668
 total balance at the end is: 100000
 ======
 16 THREADS
-total time calculated is: 0.0532412
+total time calculated is: 37.3071
 total balance at the end is: 100000
 ======
 28 THREADS
-total time calculated is: 0.153179
+total time calculated is: 108.389
 total balance at the end is: 100000
 ```
+RACE CONDITION HERE
 
-# 
+
+
+
+from lecture notes:
+allow balance to take only one lock and signal to threads that balance is executing
+if there are several balances at the same time, let them execute. And when the last balance leaves, unlock this mutex
+maybe you just need a volatile variable
+
+
+
+
+
+RACE FREE CODES:
+bank 1, 
+
+
+
+
+### I debugged bank-7, with one lock for Balance() and unique locks for accounts. 
+when we run balance(), we stop running new deposits and wait for old/running deposits to finish. Similarly, when we run deposit(), it wait for balances to finish first. 
+```
+======
+1 THREADS
+total time calculated is: 0.162016
+total balance at the end is: 100000
+======
+2 THREADS
+total time calculated is: 0.599277
+total balance at the end is: 100000
+======
+4 THREADS
+total time calculated is: 2.29676
+total balance at the end is: 100000
+======
+8 THREADS
+total time calculated is: 6.84117
+total balance at the end is: 100000
+======
+16 THREADS
+total time calculated is: 22.7772
+total balance at the end is: 100000
+======
+28 THREADS
+total time calculated is: 66.6684
+total balance at the end is: 100000
+```
